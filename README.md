@@ -1,2 +1,2 @@
 # RestLimit
-a sample servlet fiter to limiting the number of requests a client is allowed to send
+a sample servlet filter for limiting the number of requests a client is allowed to send
