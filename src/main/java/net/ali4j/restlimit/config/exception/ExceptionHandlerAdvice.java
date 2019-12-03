@@ -15,10 +15,24 @@ import java.time.LocalDateTime;
 @ControllerAdvice
 public class ExceptionHandlerAdvice {
 
-    @ExceptionHandler(RequestLimitIsReachedException.class)
+//    @ExceptionHandler(RequestLimitIsReachedException.class)
+//    @ResponseBody
+//    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+//    protected ResponseEntity<CustomErrorResponse> handleRequestLimitIsReachedException(RequestLimitIsReachedException e, HttpServletRequest request) {
+//        CustomErrorResponse errors = new CustomErrorResponse();
+//        errors.setTimestamp(LocalDateTime.now());
+//        errors.setError(e.getMessage());
+//        errors.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
+//
+//        return new ResponseEntity<>(errors, HttpStatus.INTERNAL_SERVER_ERROR);
+//
+//
+//    }
+
+    @ExceptionHandler(RuntimeException.class)
     @ResponseBody
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    protected ResponseEntity<CustomErrorResponse> handleRequestLimitIsReachedException(RequestLimitIsReachedException e, HttpServletRequest request) {
+    protected ResponseEntity<CustomErrorResponse> handleRequestLimitIsReachedException(RuntimeException e, HttpServletRequest request) {
         CustomErrorResponse errors = new CustomErrorResponse();
         errors.setTimestamp(LocalDateTime.now());
         errors.setError(e.getMessage());

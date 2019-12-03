@@ -1,6 +1,4 @@
-package net.ali4j.restlimit.controller;
-
-import net.ali4j.restlimit.config.RequestLimitConfig;
+package net.ali4j.restlimit.structure;
 
 import java.time.Instant;
 import java.time.ZoneId;
@@ -12,24 +10,12 @@ public class RequestLimitStructure {
     private Long endOfPeriod;
     private Integer currentNumberOfRequests;
 
-    public static RequestLimitStructure getInstanceWithDefaultValues(){
-        RequestLimitStructure requestLimitStructure = new RequestLimitStructure();
-        requestLimitStructure.startOfPeriod = System.currentTimeMillis();
-        requestLimitStructure.endOfPeriod =  requestLimitStructure.startOfPeriod + (RequestLimitConfig.getRequestLimitDuration()*1000);
-        requestLimitStructure.currentNumberOfRequests = 1;
-        return requestLimitStructure;
-    }
-
     public static RequestLimitStructure of(Long currentStartDate, Long currentEndDate, Integer currentNumberOfRequests){
         RequestLimitStructure requestLimitStructure = new RequestLimitStructure();
         requestLimitStructure.startOfPeriod = currentStartDate;
         requestLimitStructure.endOfPeriod = currentEndDate;
         requestLimitStructure.currentNumberOfRequests = currentNumberOfRequests;
         return requestLimitStructure;
-    }
-
-    public Long getStartOfPeriod() {
-        return startOfPeriod;
     }
 
     public void setStartOfPeriod(Long startOfPeriod) {

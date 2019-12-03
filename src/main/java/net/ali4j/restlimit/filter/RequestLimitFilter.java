@@ -1,17 +1,33 @@
-package net.ali4j.restlimit.controller;
+package net.ali4j.restlimit.filter;
 
-import net.ali4j.restlimit.config.RequestLimitConfig;
+import net.ali4j.restlimit.controller.RequestLimitConstants;
+import net.ali4j.restlimit.structure.RequestLimitStructure;
+import net.ali4j.restlimit.structure.RequestLimitStructureHolder;
+import net.ali4j.restlimit.exception.RequestLimitIsReachedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
 import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.util.Optional;
 
+@Component
 public class RequestLimitFilter implements Filter {
 
     private final Logger logger = LoggerFactory.getLogger(RequestLimitFilter.class);
+
+    @Value("${request.limit.type}")
+    private String type;
+    @Value("${request.limit.headervalue}")
+    private String typeValue;
+    @Value("${request.limit.max}")
+    private Integer max;
+    @Value("${request.limit.duration.seconds}")
+    private Integer duration;
+
 
     @Override
     public void init(FilterConfig filterConfig) {}
@@ -23,18 +39,18 @@ public class RequestLimitFilter implements Filter {
             throws IOException, ServletException {
 
         HttpServletRequest httpServletRequest = (HttpServletRequest) servletRequest;
-        String requestLimitType = RequestLimitConfig.getRequestLimitType();
+//        String requestLimitType = RequestLimitConfig.getRequestLimitType();
 
-        logger.info("RLC max number of requests:{}", RequestLimitConfig.getRequestLimitMax());
-        logger.info("RLC duration:{}", RequestLimitConfig.getRequestLimitDuration());
-        logger.info("RLC type:{}", requestLimitType);
-        logger.info("RLC type value (null if type==ip):{}", RequestLimitConfig.getRequestLimitHeaderValue());
+        logger.info("RLC max number of requests:{}", max);
+        logger.info("RLC duration:{}", duration);
+        logger.info("RLC type:{}", type);
+        logger.info("RLC type value (null if type==ip):{}", typeValue);
 
-        if(this.checkRequestLimit(requestLimitType, httpServletRequest))
+        if(this.checkRequestLimit(type, httpServletRequest))
             filterChain.doFilter(servletRequest, servletResponse);
         else {
             logger.info("request limit is reached");
-//            throw new RequestLimitIsReachedException("request limit is reached");
+            throw new RequestLimitIsReachedException("request limit is reached");
         }
 
     }
@@ -46,7 +62,7 @@ public class RequestLimitFilter implements Filter {
                 requestLimitTypeConfigValue.equals(RequestLimitConstants.TYPE_VALUE_HEADER) ) {/*header based RL config*/
 
             Optional<String> requestLimitHeaderValueOptional =
-                    Optional.ofNullable(httpServletRequest.getHeader(RequestLimitConfig.getRequestLimitHeaderValue()));
+                    Optional.ofNullable(httpServletRequest.getHeader(typeValue));
 
             /* RLCH is set in current request, this indicates that RLC is applied on this client*/
             if (requestLimitHeaderValueOptional.isPresent()) {
@@ -54,8 +70,8 @@ public class RequestLimitFilter implements Filter {
                         RequestLimitStructureHolder.getRequestLimitStructure(requestLimitHeaderValueOptional.get());
 
                 if (requestLimitStructureOptional.isPresent()) {/*RLCHV already has RLC*/
-                    resetCurrentClientRLConfig(requestLimitStructureOptional.get());
-                    if (isLimitPassed(requestLimitStructureOptional.get())) {
+                    resetCurrentClientRLConfig(requestLimitStructureOptional.get(), duration);
+                    if (isLimitPassed(requestLimitStructureOptional.get(), max)) {
                         logger.info("request already has RLC, and it has passed the limit. details: {}", requestLimitHeaderValueOptional.get());
                         return false;
                     }
@@ -68,7 +84,7 @@ public class RequestLimitFilter implements Filter {
                     }
 
                 } else { /*this is the first request of current client*/
-                    RequestLimitStructureHolder.setNewRequestLimitStructure(requestLimitHeaderValueOptional.get());
+                    RequestLimitStructureHolder.setNewRequestLimitStructure(requestLimitHeaderValueOptional.get(), duration);
                     logger.info("request doesn't have RLC, fresh one is added. RLCHV:{}", requestLimitHeaderValueOptional.get());
                     return true;
                 }
@@ -87,8 +103,8 @@ public class RequestLimitFilter implements Filter {
             Optional<RequestLimitStructure> requestLimitStructureOptional = RequestLimitStructureHolder.getRequestLimitStructure(ip);
 
             if (requestLimitStructureOptional.isPresent()) { /*ip already has RL config*/
-                resetCurrentClientRLConfig(requestLimitStructureOptional.get());
-                if (isLimitPassed(requestLimitStructureOptional.get())) {
+                resetCurrentClientRLConfig(requestLimitStructureOptional.get(), duration);
+                if (isLimitPassed(requestLimitStructureOptional.get(), max)) {
                     logger.info("request already has RL config, and it has passed the limit. details:{}", requestLimitStructureOptional.get().toString());
                     return false;
                 }
@@ -104,7 +120,7 @@ public class RequestLimitFilter implements Filter {
                 }
 
             } else {/*first request of this ip, add new request limit config*/
-                RequestLimitStructureHolder.setNewRequestLimitStructure(ip);
+                RequestLimitStructureHolder.setNewRequestLimitStructure(ip, duration);
                 logger.info("request doesn't have RLC, fresh one is added. ip:{}", ip);
                 return true;
             }
@@ -116,18 +132,14 @@ public class RequestLimitFilter implements Filter {
 
     }
 
-    static private Boolean isLimitPassed(RequestLimitStructure requestLimitStructure){
+    static private Boolean isLimitPassed(RequestLimitStructure requestLimitStructure, Integer max){
         /*check if max number of requests has reached*/
-        if (requestLimitStructure.getCurrentNumberOfRequests()>RequestLimitConfig.getRequestLimitMax())
-            return true;
+        return requestLimitStructure.getCurrentNumberOfRequests() > max;
 
-//        if ( (requestLimitStructure.getEndOfPeriod()<=System.currentTimeMillis()))
-//            return false;
-        return false;
     }
 
 
-    static private void resetCurrentClientRLConfig(RequestLimitStructure requestLimitStructure){
+    static private void resetCurrentClientRLConfig(RequestLimitStructure requestLimitStructure, Integer duration){
 
         if(requestLimitStructure.getEndOfPeriod()<System.currentTimeMillis()) {
 
@@ -135,7 +147,7 @@ public class RequestLimitFilter implements Filter {
 
             requestLimitStructure.setEndOfPeriod(
                     System.currentTimeMillis() +
-                            (RequestLimitConfig.getRequestLimitDuration() * 1000)
+                            (duration * 1000)
             );
 
             requestLimitStructure.setCurrentNumberOfRequests(1);

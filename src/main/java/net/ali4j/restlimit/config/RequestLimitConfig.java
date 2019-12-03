@@ -1,44 +1,34 @@
 package net.ali4j.restlimit.config;
 
-import net.ali4j.restlimit.annotation.RequestLimit;
-import net.ali4j.restlimit.controller.RequestLimitConstants;
+import net.ali4j.restlimit.filter.RequestLimitFilter;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Properties;
-
+@Configuration
 public class RequestLimitConfig {
 
-    static private Properties props;
 
-    static {
-        try {
-            InputStream resourceAsStream = RequestLimit.class.getClassLoader().getResourceAsStream("requestlimit.properties");
-            props = new Properties();
-            props.load(resourceAsStream);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+    @Value("${request.limit.path}")
+    private String path;
+
+    private RequestLimitFilter requestLimitFilter;
+
+
+    @Autowired
+    public RequestLimitConfig(RequestLimitFilter requestLimitFilter) {
+        this.requestLimitFilter = requestLimitFilter;
     }
 
-
-    public static String getRequestLimitPath() {
-        return (String)props.get(RequestLimitConstants.PATH);
-    }
-
-    public static String getRequestLimitType() {
-        return (String)props.get(RequestLimitConstants.TYPE);
-    }
-
-    public static String getRequestLimitHeaderValue() {
-        return (String)props.get(RequestLimitConstants.HEADERVALUE);
-    }
-
-    public static Integer getRequestLimitMax() {
-        return Integer.valueOf((String)props.get(RequestLimitConstants.MAX));
-    }
-
-    public static Integer getRequestLimitDuration() {
-        return Integer.valueOf((String)props.get(RequestLimitConstants.DURATION));
+    @Bean
+    public FilterRegistrationBean filterRegistrationBean() {
+        FilterRegistrationBean registration = new FilterRegistrationBean();
+        registration.setFilter(requestLimitFilter);
+        registration.addUrlPatterns(path);
+        return registration;
     }
 }
+
+
