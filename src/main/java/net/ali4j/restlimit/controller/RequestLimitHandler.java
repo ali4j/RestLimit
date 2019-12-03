@@ -11,7 +11,6 @@ import org.springframework.context.annotation.Lazy;
 
 import javax.servlet.Filter;
 
-//@Component
 public class RequestLimitHandler implements ApplicationContextAware, InitializingBean {
 
     private FilterRegistrationBean filterRegistrationBean;

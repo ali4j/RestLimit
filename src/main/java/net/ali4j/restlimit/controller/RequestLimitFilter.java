@@ -1,6 +1,5 @@
 package net.ali4j.restlimit.controller;
 
-//import net.ali4j.restlimit.config.RequestLimitConfig;
 import net.ali4j.restlimit.config.RequestLimitConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

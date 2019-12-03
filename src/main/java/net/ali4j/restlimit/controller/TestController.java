@@ -6,7 +6,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.logging.Logger;
 
-//@RequestLimit(max=5, duration="20s", type= RequestLimit.Type.IP)
 @RestController
 public class TestController {
     private static Long RequestCounter = 0L;
